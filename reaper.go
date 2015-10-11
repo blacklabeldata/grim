@@ -7,7 +7,7 @@ import (
 )
 
 // GrimReaper is a task runner which will wait until all the tasks
-// are complete until comtinuing. Reapers can also kill tasks prematurely if
+// are complete until continuing. Reapers can also kill tasks prematurely if
 // they are listening to the given context.
 type GrimReaper interface {
 	// New creates a sub-reaper which is attached to the parent context. If
