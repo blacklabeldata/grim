@@ -15,7 +15,11 @@ type GrimReaper interface {
 	// still be called for child reapers.
 	New() GrimReaper
 
-	// Spawn starts a new goroutine for the given function. The task should
+	// SpawnFunc starts a new goroutine for the given function. The task should
+	// return as soon as possible after the context completes.
+	SpawnFunc(TaskFunc)
+
+	// Spawn starts a new goroutine for the given Task. The task should
 	// return as soon as possible after the context completes.
 	Spawn(Task)
 
@@ -44,8 +48,12 @@ func ReaperWithContext(c context.Context) GrimReaper {
 	return &reaper{wg, ctx, cancel}
 }
 
-// Task is a killable function which runs in a separate go routine. In order to fulfill the contract the function MUST listen to the context and exit if it fires.
-type Task func(context.Context)
+// TaskFunc is a killable function which runs in a separate go routine. In order to fulfill the contract the function MUST listen to the context and exit if it fires.
+type TaskFunc func(context.Context)
+
+type Task interface {
+	Execute(context.Context)
+}
 
 // reaper implements the GrimReaper interface.
 type reaper struct {
@@ -54,13 +62,23 @@ type reaper struct {
 	cancel context.CancelFunc
 }
 
+// SpawnFunc runs a task.
+func (r *reaper) SpawnFunc(t TaskFunc) {
+	r.wg.Add(1)
+	c, _ := context.WithCancel(r.ctx)
+	go func(ctx context.Context) {
+		defer r.wg.Done()
+		t(ctx)
+	}(c)
+}
+
 // Spawn runs a task.
 func (r *reaper) Spawn(t Task) {
 	r.wg.Add(1)
 	c, _ := context.WithCancel(r.ctx)
 	go func(ctx context.Context) {
-		t(ctx)
-		r.wg.Done()
+		defer r.wg.Done()
+		t.Execute(ctx)
 	}(c)
 }
 
