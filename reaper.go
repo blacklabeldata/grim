@@ -31,6 +31,9 @@ type GrimReaper interface {
 	// until chlid reapers are finished. Each reaper must call wait
 	// independently.
 	Wait()
+
+	// Dead returns the underlying net.Context done channel.
+	Dead() <-chan struct{}
 }
 
 // Reaper returns an implementation of the GrimReaper interface.
@@ -90,11 +93,15 @@ func (r *reaper) Wait() {
 // Kill cancels the context and waits for all tasks to exit.
 func (r *reaper) Kill() {
 	r.cancel()
-	r.Wait()
+	// r.Wait()
 }
 
 // New creates a new reaper with the current context as the parent context of
 // the new reaper.
 func (r *reaper) New() GrimReaper {
 	return ReaperWithContext(r.ctx)
+}
+
+func (r *reaper) Dead() <-chan struct{} {
+	return r.ctx.Done()
 }
